@@ -57,3 +57,14 @@ function someMutexedThing (cb) {
   })
 }
 ```
+
+A slocket is like a Promise, so this works:
+
+```
+slocket('/path/to/filename.lock').then(lock => {
+  // do your stuff in this space
+  lock.release()
+}).catch(er => {
+  // a lock could not be acquired
+})
+```
