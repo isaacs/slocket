@@ -60,7 +60,7 @@ function someMutexedThing (cb) {
 
 A slocket is like a Promise, so this works:
 
-```
+```js
 slocket('/path/to/filename.lock').then(lock => {
   // do your stuff in this space
   lock.release()
