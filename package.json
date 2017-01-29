@@ -1,0 +1,34 @@
+{
+  "name": "slocket",
+  "version": "0.0.0",
+  "description": "A locking socket alternative to file-system mutex locks",
+  "main": "index.js",
+  "dependencies": {
+    "bluebird": "^3.4.7",
+    "signal-exit": "^3.0.2",
+    "trivial-deferred": "^1.0.1"
+  },
+  "devDependencies": {
+    "tap": "^10.0.0"
+  },
+  "scripts": {
+    "test": "tap test/*.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/isaacs/slocket"
+  },
+  "keywords": [
+    "mutex",
+    "lock",
+    "socket",
+    "file system",
+    "lockfile"
+  ],
+  "author": "Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/isaacs/slocket/issues"
+  },
+  "homepage": "https://github.com/isaacs/slocket#readme"
+}
