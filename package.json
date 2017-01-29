@@ -1,6 +1,6 @@
 {
   "name": "slocket",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "A locking socket alternative to file-system mutex locks",
   "main": "index.js",
   "dependencies": {
@@ -13,9 +13,9 @@
   },
   "scripts": {
     "test": "tap test/*.js",
-    "preversion":"npm test",
-    "postversion":"npm publish",
-    "postpublish":"git push origin --all; git push origin --tags"
+    "preversion": "npm test",
+    "postversion": "npm publish",
+    "postpublish": "git push origin --all; git push origin --tags"
   },
   "repository": {
     "type": "git",
