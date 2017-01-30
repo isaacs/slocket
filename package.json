@@ -34,5 +34,6 @@
   "bugs": {
     "url": "https://github.com/isaacs/slocket/issues"
   },
-  "homepage": "https://github.com/isaacs/slocket#readme"
+  "homepage": "https://github.com/isaacs/slocket#readme",
+  "files": [ "index.js" ]
 }
