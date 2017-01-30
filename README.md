@@ -68,3 +68,18 @@ slocket('/path/to/filename.lock').then(lock => {
   // a lock could not be acquired
 })
 ```
+
+If you want to use async/await, you can do this, which is nice:
+
+```js
+async function fooSingleFile (args) {
+  var lock = await slocket('foo')
+
+  // now I have an exclusive lock on the fooness!
+
+  await otherAsyncThingie(args)
+
+  // all done, release the mutex
+  lock.release()
+}
+```
