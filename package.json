@@ -1,6 +1,6 @@
 {
   "name": "slocket",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A locking socket alternative to file-system mutex locks",
   "main": "index.js",
   "dependencies": {
@@ -35,5 +35,7 @@
     "url": "https://github.com/isaacs/slocket/issues"
   },
   "homepage": "https://github.com/isaacs/slocket#readme",
-  "files": [ "index.js" ]
+  "files": [
+    "index.js"
+  ]
 }
