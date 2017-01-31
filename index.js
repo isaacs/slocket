@@ -52,6 +52,7 @@ function Slocket (name, cb) {
   }.bind(this))
   this.then = this.promise.then.bind(this.promise)
   this.catch = this.promise.catch.bind(this.promise)
+  this.release = this.release.bind(this)
 
   this.acquire()
 }
@@ -68,6 +69,7 @@ Slocket.prototype.acquire = function () {
   this.server.once('error', this.onServerError.bind(this))
   this.server.listen(this.name, this.onServerListen.bind(this))
   this.server.on('close', this.onServerClose.bind(this))
+  this.server.unref()
 }
 
 Slocket.prototype.onAcquire = function () {
@@ -157,7 +159,6 @@ Slocket.prototype.serverRelease = function (sync) {
     return
 
   this.debug('serverRelease %j', sync, this.connectionQueue.length)
-  this.server.unref()
   if (this.connectionQueue.length)
     this.delegate(this.connectionQueue.shift())
   else
@@ -173,10 +174,6 @@ Slocket.prototype.onServerClose = function () {
 Slocket.prototype.onServerError = function (er) {
   this.debug('onServerError', er.message)
   this.emit('serverError', er)
-  // XXX just in the off chance this happens later, kill any connections
-  // and destroy the server
-  if (this.server)
-    this.server.close()
   this.server = null
   switch (er.code) {
     case 'ENOTSOCK':

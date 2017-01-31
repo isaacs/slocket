@@ -133,23 +133,34 @@ t.test('server disconnect', function (t) {
   var module = require.resolve('../')
   var file = filename('server-disconnect')
   var prog = 'var lock = require(process.argv[1])' +
-             '(process.argv[2])' +
-             '.then(console.log.bind(console,"1"))\n' +
-             'process.on("SIGHUP", lock.release.bind(lock))\n'
-  var child = spawn(node, [prog, module, file])
+             '(process.argv[2])\n' +
+             'lock.then(function () { console.log("1") })\n' +
+             'setTimeout(function() {}, 10000)\n' +
+             'process.on("SIGHUP", lock.release)\n'
+  var child = spawn(node, ['-e', prog, module, file])
+  child.stderr.pipe(process.stderr)
   child.stdout.on('data', function () {
+    // now we know that the server has the lock
     var didKill = false
     setTimeout(function () {
       child.kill('SIGHUP')
     })
-    Promise.all([
-      slocket(file, onLock),
-      slocket(file, onLock)
-    ]).then(t.end)
+
+    var clients = [
+      Slocket(file, onLock),
+      Slocket(file, onLock),
+      Slocket(file, onLock),
+      Slocket(file, onLock),
+      Slocket(file, onLock)
+    ]
+    Promise.all(clients).then(t.end)
+
     function onLock (er, lock) {
+      var has = clients.filter(function (c) { return c.has })
+      t.equal(has.length, 1, 'always exactly one lock')
       if (!didKill) {
         didKill = true
-        child.kill('SIGKILL')
+        child.kill('SIGINT')
         setTimeout(lock.release, 100)
       } else
         lock.release()
@@ -157,10 +168,103 @@ t.test('server disconnect', function (t) {
   })
 })
 
-t.test('open 1, connect 3, disconnect abruptly')
+t.test('server process graceful exit', function (t) {
+  var spawn = require('child_process').spawn
+  var node = process.execPath
+  var module = require.resolve('../')
+  var file = filename('server-disconnect')
+  var prog = 'var lock = require(process.argv[1])' +
+             '(process.argv[2])\n' +
+             'lock.then(function () { console.log("1") })\n' +
+             'var t = setTimeout(function() {}, 10000)\n' +
+             'process.on("SIGHUP", function () {\n' +
+             '  lock.release()\n' +
+             '  process.exit()\n' +
+             '})\n'
+  var child = spawn(node, ['-e', prog, module, file])
+  var childClosed = false
+  child.on('close', function (code, signal) {
+    childClosed = true
+    t.equal(code, 0)
+    t.equal(signal, null)
+  })
+
+  child.stderr.pipe(process.stderr)
+  child.stdout.on('data', function () {
+    // now we know that the server has the lock
+    var didKill = false
+    setTimeout(function () {
+      child.kill('SIGHUP')
+    })
+
+    var clients = [
+      Slocket(file, onLock),
+      Slocket(file, onLock),
+      Slocket(file, onLock),
+      Slocket(file, onLock),
+      Slocket(file, onLock)
+    ]
+    Promise.all(clients).then(function () {
+      t.ok(childClosed, 'child process exited gracefully')
+      t.end()
+    })
+
+    function onLock (er, lock) {
+      var has = clients.filter(function (c) { return c.has })
+      t.equal(has.length, 1, 'always exactly one lock')
+      setTimeout(lock.release, 100)
+    }
+  })
+})
+
+t.test('server process graceful exit without release', function (t) {
+  var spawn = require('child_process').spawn
+  var node = process.execPath
+  var module = require.resolve('../')
+  var file = filename('server-disconnect')
+  var prog = 'var lock = require(process.argv[1])' +
+             '(process.argv[2])\n' +
+             'lock.then(function () { console.log("1") })\n' +
+             'var t = setTimeout(function() {}, 10000)\n'
+  var child = spawn(node, ['-e', prog, module, file])
+  var childClosed = false
+  child.on('close', function (code, signal) {
+    childClosed = true
+    t.equal(code, null)
+    t.equal(signal, 'SIGHUP')
+  })
+
+  child.stderr.pipe(process.stderr)
+  child.stdout.on('data', function () {
+    // now we know that the server has the lock
+    var didKill = false
+    setTimeout(function () {
+      child.kill('SIGHUP')
+    })
+
+    var clients = [
+      Slocket(file, onLock),
+      Slocket(file, onLock),
+      Slocket(file, onLock),
+      Slocket(file, onLock),
+      Slocket(file, onLock)
+    ]
+    Promise.all(clients).then(function () {
+      t.ok(childClosed, 'child process exited gracefully')
+      t.end()
+    })
+
+    function onLock (er, lock) {
+      var has = clients.filter(function (c) { return c.has })
+      t.equal(has.length, 1, 'always exactly one lock')
+      setTimeout(lock.release, 100)
+    }
+  })
+})
+
 t.test('server object emit error after being removed')
 t.test('try to lock on a non-socket, auto-lock once removed')
-t.test('try to lock a socket that is not a slocket server')
+t.test('try to lock a socket that is not a Slocket server')
 t.test('delete socket between EADDRINUSE and connect')
 t.test('server kill connection abruptly')
 t.test('release before connection connects')
