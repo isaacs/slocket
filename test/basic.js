@@ -130,14 +130,9 @@ t.test('staggered', function (t) {
 t.test('server disconnect', function (t) {
   var spawn = require('child_process').spawn
   var node = process.execPath
-  var module = require.resolve('../')
   var file = filename('server-disconnect')
-  var prog = 'var lock = require(process.argv[1])' +
-             '(process.argv[2])\n' +
-             'lock.then(function () { console.log("1") })\n' +
-             'setTimeout(function() {}, 10000)\n' +
-             'process.on("SIGHUP", lock.release)\n'
-  var child = spawn(node, ['-e', prog, module, file])
+  var prog = require.resolve('./fixtures/server-disconnect.js')
+  var child = spawn(node, [prog, file])
   child.stderr.pipe(process.stderr)
   child.stdout.on('data', function () {
     // now we know that the server has the lock
@@ -171,17 +166,9 @@ t.test('server disconnect', function (t) {
 t.test('server process graceful exit', function (t) {
   var spawn = require('child_process').spawn
   var node = process.execPath
-  var module = require.resolve('../')
-  var file = filename('server-disconnect')
-  var prog = 'var lock = require(process.argv[1])' +
-             '(process.argv[2])\n' +
-             'lock.then(function () { console.log("1") })\n' +
-             'var t = setTimeout(function() {}, 10000)\n' +
-             'process.on("SIGHUP", function () {\n' +
-             '  lock.release()\n' +
-             '  process.exit()\n' +
-             '})\n'
-  var child = spawn(node, ['-e', prog, module, file])
+  var file = filename('graceful-exit')
+  var prog = require.resolve('./fixtures/graceful-exit.js')
+  var child = spawn(node, [prog, file])
   var childClosed = false
   child.on('close', function (code, signal) {
     childClosed = true
@@ -220,13 +207,11 @@ t.test('server process graceful exit', function (t) {
 t.test('server process graceful exit without release', function (t) {
   var spawn = require('child_process').spawn
   var node = process.execPath
-  var module = require.resolve('../')
-  var file = filename('server-disconnect')
-  var prog = 'var lock = require(process.argv[1])' +
-             '(process.argv[2])\n' +
-             'lock.then(function () { console.log("1") })\n' +
-             'var t = setTimeout(function() {}, 10000)\n'
-  var child = spawn(node, ['-e', prog, module, file])
+  var file = filename('server-disconnect-graceful')
+  var prog = require.resolve('./fixtures/exit-no-release.js')
+  var child = spawn(node, [prog, file], {
+    env: { NODE_DEBUG: 'slocket' }
+  })
   var childClosed = false
   child.on('close', function (code, signal) {
     childClosed = true
@@ -234,7 +219,10 @@ t.test('server process graceful exit without release', function (t) {
     t.equal(signal, 'SIGHUP')
   })
 
-  child.stderr.pipe(process.stderr)
+  var stderr = ''
+  child.stderr.on('data', function (c) {
+    stderr += c
+  })
   child.stdout.on('data', function () {
     // now we know that the server has the lock
     var didKill = false
@@ -251,6 +239,7 @@ t.test('server process graceful exit without release', function (t) {
     ]
     Promise.all(clients).then(function () {
       t.ok(childClosed, 'child process exited gracefully')
+      t.match(stderr, /onProcessExit\n/, 'hit the onProcessExit fn')
       t.end()
     })
 
@@ -262,9 +251,23 @@ t.test('server process graceful exit without release', function (t) {
   })
 })
 
-t.test('server object emit error after being removed')
-t.test('try to lock on a non-socket, auto-lock once removed')
+t.test('try to lock on a non-socket, auto-lock once gone', {
+  skip: process.platform === 'win32' ? 'skip on windows' : ''
+}, function (t) {
+  var file = filename('not-a-socket')
+  var fs = require('fs')
+  fs.writeFileSync(file, 'not a socket\n')
+  var lock = Slocket(file, function (er, lock) {
+    lock.release()
+    t.end()
+  })
+  t.notOk(lock.has)
+  t.notOk(fs.statSync(file).isSocket())
+  rimraf(file, function () {})
+})
+
 t.test('try to lock a socket that is not a Slocket server')
+t.test('server object emit error after being removed')
 t.test('delete socket between EADDRINUSE and connect')
 t.test('server kill connection abruptly')
 t.test('release before connection connects')
