@@ -4,12 +4,12 @@
   "description": "A locking socket alternative to file-system mutex locks",
   "main": "index.js",
   "dependencies": {
+    "rimraf": "^2.5.4",
     "bluebird": "^3.4.7",
     "signal-exit": "^3.0.2"
   },
   "devDependencies": {
     "lockfile": "^1.0.3",
-    "rimraf": "^2.5.4",
     "tap": "^10.0.0"
   },
   "scripts": {
