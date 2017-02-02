@@ -226,6 +226,9 @@ Slocket.prototype.onConnectionError = function (er) {
     case 'ENOENT':
       // socket was there, but now is gone!
       return this.acquire()
+
+    case 'ENOTSOCK':
+      // something other than a socket is there already
     case 'ECONNREFUSED':
       // socket there, but not listening
       // watch for changes, in case it's that it's not a socket
