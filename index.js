@@ -36,6 +36,8 @@ function Slocket (name, cb) {
 
   this.id = ID++
   this.name = path.resolve(name)
+  if (process.platform === 'win32' && !/^\\\\.\\pipe\\/i.test(name))
+    this.name = '\\\\.\\pipe\\' + name
   if (cb)
     this.cb = cb
   this.server = null
