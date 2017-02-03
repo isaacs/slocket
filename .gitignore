@@ -3,3 +3,4 @@ node_modules
 pound/output.txt
 pound/slocket-testing*
 pound/*.lock
+coverage/
