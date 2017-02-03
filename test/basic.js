@@ -1,5 +1,8 @@
 var Slocket = require('../')
 var rimraf = require('rimraf')
+var node = process.execPath
+var spawn = require('child_process').spawn
+var fs = require('fs')
 var t = require('tap')
 t.jobs = 1
 
@@ -128,8 +131,6 @@ t.test('staggered', function (t) {
 })
 
 t.test('server disconnect', function (t) {
-  var spawn = require('child_process').spawn
-  var node = process.execPath
   var file = filename('server-disconnect')
   var prog = require.resolve('./fixtures/server-disconnect.js')
   var child = spawn(node, [prog, file])
@@ -164,8 +165,6 @@ t.test('server disconnect', function (t) {
 })
 
 t.test('server process graceful exit', function (t) {
-  var spawn = require('child_process').spawn
-  var node = process.execPath
   var file = filename('graceful-exit')
   var prog = require.resolve('./fixtures/graceful-exit.js')
   var child = spawn(node, [prog, file])
@@ -205,8 +204,6 @@ t.test('server process graceful exit', function (t) {
 })
 
 t.test('server process graceful exit without release', function (t) {
-  var spawn = require('child_process').spawn
-  var node = process.execPath
   var file = filename('server-disconnect-graceful')
   var prog = require.resolve('./fixtures/exit-no-release.js')
   var child = spawn(node, [prog, file], {
@@ -266,7 +263,49 @@ t.test('try to lock on a non-socket, auto-lock once gone', {
   rimraf(file, function () {})
 })
 
-t.test('try to lock a socket that is not a Slocket server')
+t.test('try to lock on non-Slocket socket', function (t) {
+  var file = filename('non-slocket')
+  var maker = require.resolve('./fixtures/abandon-socket.js')
+  spawn(node, [maker, file]).on('close', function () {
+    t.ok(fs.statSync(file).isSocket(), 'socket is there')
+    var deleted = false
+    setTimeout(function () {
+      fs.unlinkSync(file)
+      t.notOk(lock.has, 'should not have lock yet')
+      deleted = true
+    }, 100)
+    var lock = Slocket(file, function (er, lock) {
+      if (er)
+        throw er
+      t.ok(deleted, 'deleted file before lock acquired')
+      t.equal(lock.type(), 'server')
+      t.end()
+    })
+  })
+})
+
+t.test('server disconnect, connection sync end', function (t) {
+  var file = filename('server-disconnect-conn-sync-end')
+  var prog = require.resolve('./fixtures/server-disconnect.js')
+  var child = spawn(node, [prog, file])
+  child.stderr.pipe(process.stderr)
+  child.stdout.on('data', function () {
+    // now we know that the server has the lock
+    var didKill = false
+    setTimeout(function () {
+      child.kill('SIGINT')
+    }, 100)
+
+    Slocket(file, function onLock (er, lock) {
+      setTimeout(function () {
+        lock.release(true)
+        t.throws(fs.statSync.bind(fs, file))
+        t.end()
+      }, 100)
+    })
+  })
+})
+
 t.test('server object emit error after being removed')
 t.test('delete socket between EADDRINUSE and connect')
 t.test('server kill connection abruptly')
