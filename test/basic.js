@@ -20,6 +20,7 @@ var lockPrefix = (process.platform === 'win32')
   ? ('\\\\.\\pipe\\' + __dirname + '\\') : (__dirname + '/')
 function filename (n) {
   names.push(n)
+  clear(n)
   return lockPrefix + n
 }
 function clear (n) {
