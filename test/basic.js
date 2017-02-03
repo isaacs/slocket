@@ -84,7 +84,6 @@ t.test('3 parallel locks', function (t) {
   })
 })
 
-// these would get up to or near 100% coverage
 t.test('3 serial locks', function (t) {
   clear('3-serial')
   var file = filename('3-serial')
