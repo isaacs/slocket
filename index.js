@@ -113,6 +113,11 @@ Slocket.prototype.onServerConnection = function (c) {
   this.debug('onServerConnection')
   this.emit('serverConnection', c)
   c.on('close', this.onServerConnectionClose.bind(this, c))
+
+  // Nearly impossible, but the race condition between the server
+  // closing after releasing a lock, and a client connecting can
+  // sometimes be hit in the pound test.  Ignore for test coverage.
+  /* istanbul ignore else */
   if (this.currentClient || this.has)
     this.connectionQueue.push(c)
   else

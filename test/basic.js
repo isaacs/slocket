@@ -305,7 +305,43 @@ t.test('server disconnect, connection sync end', function (t) {
   })
 })
 
+t.test('server kill connection abruptly', function (t) {
+  var file = filename('server-kill-abruptly')
+  Slocket(file, function (er, serverLock) {
+    if (er)
+      throw er
+    t.equal(serverLock.type(), 'server')
+
+    var clients = [
+      Slocket(file, onLock),
+      Slocket(file, onLock),
+      Slocket(file, onLock),
+      Slocket(file, onLock),
+      Slocket(file, onLock)
+    ]
+    Promise.all(clients).then(t.end)
+
+    function onLock (er, lock) {
+      var has = clients.filter(function (c) { return c.has })
+      t.equal(has.length, 1, 'always exactly one lock')
+      setTimeout(lock.release, 100)
+    }
+
+    setTimeout(function () {
+      t.equal(serverLock.currentClient, null)
+      t.ok(serverLock.has)
+      t.equal(serverLock.connectionQueue.length, 5)
+      serverLock.connectionQueue[0].destroy()
+      serverLock.connectionQueue[2].destroy()
+      serverLock.connectionQueue[4].destroy()
+      setTimeout(function () {
+        t.equal(serverLock.connectionQueue.length, 5)
+        serverLock.release()
+      }, 100)
+    }, 100)
+  })
+})
+
 t.test('server object emit error after being removed')
 t.test('delete socket between EADDRINUSE and connect')
-t.test('server kill connection abruptly')
 t.test('release before connection connects')
