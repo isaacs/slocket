@@ -97,6 +97,7 @@ Slocket.prototype.onAcquire = function () {
 }
 
 Slocket.prototype.onServerListen = function () {
+  this.server.listening = true
   this.debug('onServerListen', this.server.listening)
   this.emit('serverListen')
   process.nextTick(function onServerListenNT () {
@@ -169,8 +170,10 @@ Slocket.prototype.serverRelease = function (sync) {
   this.debug('serverRelease %j', sync, this.connectionQueue.length)
   if (this.connectionQueue.length)
     this.delegate(this.connectionQueue.shift())
-  else
+  else {
+    this.server.listening = false
     this.server.close()
+  }
 }
 
 Slocket.prototype.onServerClose = function () {
