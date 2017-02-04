@@ -6,6 +6,8 @@ var fs = require('fs')
 var t = require('tap')
 t.jobs = +process.env.JOBS || 4
 
+var windows = process.platform === 'win32'
+
 if (typeof Promise === 'undefined')
   Promise = require('bluebird')
 
@@ -16,8 +18,9 @@ t.teardown(function () {
 })
 
 var names = []
-var lockPrefix = (process.platform === 'win32')
-  ? ('\\\\.\\pipe\\' + __dirname + '\\') : (__dirname + '/')
+var lockPrefix = windows ? ('\\\\.\\pipe\\' + __dirname + '\\')
+    : (__dirname + '/')
+
 function filename (n) {
   names.push(n)
   clear(n)
@@ -88,7 +91,6 @@ t.test('3 parallel locks', function (t) {
 t.test('3 serial locks', function (t) {
   clear('3-serial')
   var file = filename('3-serial')
-  t.teardown(clear.bind(null, '3-serial'))
   function go (i) {
     if (i === 3)
       return t.end()
@@ -106,18 +108,17 @@ t.test('3 serial locks', function (t) {
 t.test('staggered', function (t) {
   clear('3-staggered')
   var file = filename('3-staggered')
-  t.teardown(clear.bind(null, '3-staggered'))
 
   var set = []
   Slocket(file).then(function (lock) {
     set[0] = lock
     t.equal(lock.type(), 'server')
     Slocket(file, function (er, lock) {
-      t.equal(lock.type(), 'connection')
+      t.equal(lock.type(), windows ? 'server' : 'connection')
       set[1] = lock
 
       Slocket(file, function (er, lock) {
-        t.equal(lock.type(), 'connection')
+        t.equal(lock.type(), windows ? 'server' : 'connection')
         lock.release()
         t.end()
       })
@@ -130,7 +131,9 @@ t.test('staggered', function (t) {
   })
 })
 
-t.test('server disconnect', function (t) {
+t.test('server disconnect', {
+  skip: windows ? 'skip on windows' : false
+}, function (t) {
   var file = filename('server-disconnect')
   var prog = require.resolve('./fixtures/server-disconnect.js')
   var child = spawn(node, [prog, file])
@@ -164,7 +167,9 @@ t.test('server disconnect', function (t) {
   })
 })
 
-t.test('server process graceful exit', function (t) {
+t.test('server process graceful exit', {
+  skip: windows ? 'skip on windows' : false
+}, function (t) {
   var file = filename('graceful-exit')
   var prog = require.resolve('./fixtures/graceful-exit.js')
   var child = spawn(node, [prog, file])
@@ -203,7 +208,9 @@ t.test('server process graceful exit', function (t) {
   })
 })
 
-t.test('server process graceful exit without release', function (t) {
+t.test('server process graceful exit without release', {
+  skip: windows ? 'skip on windows' : false
+}, function (t) {
   var file = filename('server-disconnect-graceful')
   var prog = require.resolve('./fixtures/exit-no-release.js')
   var child = spawn(node, [prog, file], {
@@ -249,7 +256,7 @@ t.test('server process graceful exit without release', function (t) {
 })
 
 t.test('try to lock on a non-socket, auto-lock once gone', {
-  skip: process.platform === 'win32' ? 'skip on windows' : ''
+  skip: windows ? 'skip on windows' : false
 }, function (t) {
   var file = filename('not-a-socket')
   var fs = require('fs')
@@ -263,7 +270,9 @@ t.test('try to lock on a non-socket, auto-lock once gone', {
   rimraf(file, function () {})
 })
 
-t.test('try to lock on non-Slocket socket', function (t) {
+t.test('try to lock on non-Slocket socket', {
+  skip: windows ? 'skip on windows' : false
+}, function (t) {
   var file = filename('non-slocket')
   var maker = require.resolve('./fixtures/abandon-socket.js')
   spawn(node, [maker, file]).on('close', function () {
