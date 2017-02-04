@@ -4,7 +4,7 @@ var node = process.execPath
 var spawn = require('child_process').spawn
 var fs = require('fs')
 var t = require('tap')
-t.jobs = 4
+t.jobs = +process.env.JOBS || 4
 
 if (typeof Promise === 'undefined')
   Promise = require('bluebird')
