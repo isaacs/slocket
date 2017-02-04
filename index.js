@@ -48,6 +48,7 @@ function Slocket (name, cb) {
   this.had = false
   this.connectionQueue = []
   this.currentClient = null
+  this.windows = process.platform === 'win32'
 
   this.promise = new Promise(function (resolve, reject) {
     this.resolve = resolve
@@ -142,6 +143,9 @@ Slocket.prototype.onServerConnectionClose = function (c) {
 }
 
 Slocket.prototype.delegate = function (c) {
+  if (this.windows)
+    return this.serverClose(c)
+
   this.debug('delegate')
   assert.equal(this.has, false)
   this.debug('delegate new client')
@@ -170,10 +174,20 @@ Slocket.prototype.serverRelease = function (sync) {
   this.debug('serverRelease %j', sync, this.connectionQueue.length)
   if (this.connectionQueue.length)
     this.delegate(this.connectionQueue.shift())
-  else {
-    this.server.listening = false
-    this.server.close()
-  }
+  else
+    this.serverClose()
+}
+
+Slocket.prototype.serverClose = function (conn) {
+  this.debug('serverClose', this.connectionQueue.length)
+  this.server.listening = false
+  this.server.close()
+  if (conn)
+    conn.destroy()
+  this.connectionQueue.forEach(function (connection) {
+    connection.destroy()
+  })
+  this.connectionQueue.length = 0
 }
 
 Slocket.prototype.onServerClose = function () {

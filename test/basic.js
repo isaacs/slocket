@@ -24,7 +24,7 @@ function filename (n) {
   return lockPrefix + n
 }
 function clear (n) {
-  rimraf.sync(lockPrefix + n)
+  try { rimraf.sync(lockPrefix + n) } catch (er) {}
 }
 
 t.test('3 parallel locks', function (t) {
@@ -341,6 +341,34 @@ t.test('server kill connection abruptly', function (t) {
       }, 100)
     }, 100)
   })
+})
+
+t.test('verify behavior when pretending to be windows', function (t) {
+  var file = filename('windows-pretend')
+  var locks = [
+    Slocket(file, onLock),
+    Slocket(file, onLock),
+    Slocket(file, onLock),
+    Slocket(file, onLock),
+    Slocket(file, onLock)
+  ]
+
+  locks.forEach(function (l) {
+    l.windows = true
+  })
+
+  function onLock (er, lock) {
+    if (er)
+      throw er
+
+    // all locks are servers on windows, clients are just for waiting
+    t.equal(lock.type(), 'server', 'is a server')
+    var has = locks.filter(function (c) { return c.has })
+    t.equal(has.length, 1, 'always exactly one lock')
+    setTimeout(lock.release, 100)
+  }
+
+  return Promise.all(locks)
 })
 
 t.test('server object emit error after being removed')
