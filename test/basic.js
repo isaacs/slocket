@@ -4,6 +4,8 @@ var node = process.execPath
 var spawn = require('child_process').spawn
 var fs = require('fs')
 var t = require('tap')
+var net = require('net')
+
 t.jobs = +process.env.JOBS || 4
 
 var windows = process.platform === 'win32'
@@ -378,6 +380,36 @@ t.test('verify behavior when pretending to be windows', function (t) {
   }
 
   return Promise.all(locks)
+})
+
+t.test('slocket.has() function', function (t) {
+  var file = filename('not-actually-used')
+  var s = Slocket(file)
+  t.equal(s.type(), 'none')
+  s.then(function () {
+    s.release(true)
+    s.has = true
+    // fake a wtf state
+    s.has = true
+    t.equal(s.type(), 'wtf')
+    t.end()
+  })
+})
+
+t.test('connect to non-slocket socket', function (t) {
+  var net = require('net')
+  var file = filename('not-a-slocket-server')
+  var server = net.createServer(function (conn) {
+    conn.write('O')
+    setTimeout(function () {
+      conn.write('this is not ok')
+      server.close()
+    })
+  })
+  server.listen(file, function () {
+    var s = Slocket(file)
+    t.end()
+  })
 })
 
 t.test('server object emit error after being removed')
